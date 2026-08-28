@@ -146,14 +146,14 @@ nixnotes.renderers.charts = {
 
 ## It consumes the app grammar; it does not reimplement Kubernetes
 
-`modules/cluster.nix` **defines into `nixk3s.apps`** and renders nothing itself. Import the grammar
-alongside this module — it is a hard requirement, and a version of this module that quietly rendered
-its own Deployments when the grammar was absent would be the second implementation this repository
-exists to not have.
+`modules/cluster.nix` is constructed by nixk3s's consumer factory, **defines into `nixk3s.apps`**,
+and renders nothing itself. Import the grammar alongside this module — it is a hard requirement,
+and a version of this module that quietly rendered its own Deployments when the grammar was absent
+would be the second implementation this repository exists to not have.
 
-Neither flake is an input of the other for a consumer. `nixk3s` and `nixidy` are **checks-only**
-inputs here, so `nix flake check` can render this module through the real grammar and assert the
-manifests that come out.
+`nixk3s` is therefore the cluster module's one construction-time input. `nixidy` remains a check
+input, used so `nix flake check` can render the result through the real module system and assert the
+manifests that come out. Host and client modules still take their package set from their consumer.
 
 **Nothing here is rendered below the grammar**, and that is worth stating because the siblings all
 have an escape hatch and this one does not. Every workload in this catalogue is an image with ports
@@ -233,17 +233,17 @@ guards.
 | `flake.nix` | `nixidyModules` (cluster), `nixosModules`/`systemManagerModules` (clients), `lib.*`, `checks`. |
 | `lib/engines.nix` | The cluster catalogue: streams, notebooks, archives, renderers — and the knowledge that makes each run, including what it keeps and who it answers to. |
 | `lib/clients.nix` | The client catalogue: two groups, declared and empty. This repository claims no host package. |
-| `modules/cluster.nix` | The cluster surface: translates declarations into `nixk3s.apps`, derives each namespace from a side, and makes the store restatement and the side separation structural. |
+| `modules/cluster.nix` | The four-root consumer-factory translation: derives each namespace from a side and keeps the store restatement, narrow state vocabulary, credentials, reports and side separation domain-owned. |
 | `modules/clients.nix` | Client policy and the published package lists. Also *is* the Arch backend. |
 | `modules/nixos.nix` | The NixOS backend: force-evaluates every attribute and installs it. |
-| `checks/` | Three checks that really evaluate — see below. |
+| `checks/` | Four checks that really evaluate — see below. |
 | `examples/all/values.nix` | Placeholder values that make the render check real. Nothing in it is a real fleet fact. |
 | `experiments/verify-upstream-coordinates.sh` | Every image coordinate, checked against the registry that serves it. |
 | `studies/` | Written-up findings that changed a decision here. |
 
 ## Checks
 
-`nix flake check` runs three, and none of them is syntax-only.
+`nix flake check` runs four, and none of them is syntax-only.
 
 **`clients-eval`** evaluates the client policy module through `lib.evalModules` — an empty selection
 resolves to empty lists on every plane a backend reads, both groups refuse a name, and a **tripwire**
@@ -280,6 +280,10 @@ and no Secret object is ever rendered; that an optional credential nobody named 
 that two workloads listen on the same port number in two different Services, because a port is not
 an identity; that the sleeping workload renders no replica count and its Application ignores the
 field; and that no Service carries a pinned address, an external IP or a node port.
+
+**`cluster-single-writer-render`** replaces the notebook's node path with a claim and proves its
+catalogued `singleWriter` fact still renders `Recreate`. The old translator dropped that fact and
+the main fixture passed only because a node path independently forced the same strategy.
 
 ## Status
 

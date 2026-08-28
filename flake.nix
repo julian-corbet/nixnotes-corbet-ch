@@ -1,11 +1,9 @@
 {
   description = "nixnotes — the personal knowledge surface, declared: what you wrote, what somebody else wrote and you kept, and what it takes to be able to find any of it again";
 
-  # NO INPUTS FOR CONSUMERS, the same reasoning the sibling catalogues state for themselves: this
-  # flake is options plus a catalogue, taking `pkgs`/`config`/`lib` from whichever evaluation
-  # composes it, so a real host or a real cluster render never puts a second nixpkgs -- or a sibling
-  # flake's whole input closure -- into its own closure. Everything below is used by `checks` alone;
-  # nothing this flake EXPORTS reaches into any of it.
+  # The host/client modules still take `pkgs`/`config`/`lib` entirely from their consumer. The
+  # cluster module is constructed by nixk3s' consumer factory, so nixk3s is its one deliberate
+  # construction-time input; nixpkgs and nixidy remain check inputs and do not enter that module.
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -17,11 +15,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # THE APP GRAMMAR THIS REPOSITORY CONSUMES. Also checks-only, and that is the point being proven
-    # rather than a shortcut: a consumer imports the grammar itself, and this input exists so `nix
-    # flake check` can render the cluster module through the REAL grammar and assert the manifests
-    # that come out -- rather than asserting that a module which merely mentions `nixk3s.apps`
-    # evaluates.
+    # THE APP GRAMMAR THIS REPOSITORY CONSUMES, and now also the source of the consumer factory that
+    # constructs the exported cluster module. Checks still compose the resulting module through the
+    # real grammar and renderer rather than accepting a module that merely mentions `nixk3s.apps`.
     nixk3s = {
       url = "github:julian-corbet/nixk3s-corbet-ch";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -34,13 +30,16 @@
       lib = nixpkgs.lib;
       forAllSystems = lib.genAttrs [ "x86_64-linux" "aarch64-linux" ];
       pkgsFor = system: nixpkgs.legacyPackages.${system};
+      clusterModule = import ./modules/cluster.nix {
+        inherit (nixk3s.lib) mkConsumerModule;
+      };
     in
     {
       # The cluster plane, all three sides of it. Composed into a nixidy environment ALONGSIDE the
       # app grammar, which declares the options this module defines into -- see modules/cluster.nix's
       # own header.
-      nixidyModules.nixnotes = ./modules/cluster.nix;
-      nixidyModules.default = ./modules/cluster.nix;
+      nixidyModules.nixnotes = clusterModule;
+      nixidyModules.default = clusterModule;
 
       # The host plane, for the commands a person works on their own corpus with. Here the system is
       # nix, so the backend installs; on Arch there is nothing to install FROM, so the policy module
@@ -54,7 +53,7 @@
       # Policy alone, for a consumer that wants the computed lists and will wire them itself, plus
       # the raw catalogues for inspection without re-reading the files.
       lib.clientsPolicy = ./modules/clients.nix;
-      lib.cluster = ./modules/cluster.nix;
+      lib.cluster = clusterModule;
       lib.engines = import ./lib/engines.nix { };
       lib.clients = import ./lib/clients.nix { };
 
@@ -74,6 +73,23 @@
               nixk3s.nixidyModules.addressing
               self.nixidyModules.nixnotes
               ./examples/all/values.nix
+            ];
+          };
+
+          # The historical translator happened to render Recreate for the checked corpus because
+          # every fixture used a node path. The catalogue's stronger fact is `singleWriter`; this
+          # claim-backed variant proves the factory now carries that fact into the grammar too.
+          claimEnv = nixidy.lib.mkEnv {
+            inherit pkgs;
+            modules = [
+              nixk3s.nixidyModules.apps
+              nixk3s.nixidyModules.addressing
+              self.nixidyModules.nixnotes
+              ./examples/all/values.nix
+              {
+                nixnotes.notebooks.example-wiki.state.space.hostPath = lib.mkForce null;
+                nixnotes.notebooks.example-wiki.state.space.claim = "example-wiki-space";
+              }
             ];
           };
         in
@@ -100,6 +116,12 @@
           # a rolling update in front of a single writer, or name one side's Secret from the other
           # -- none of that is an eval error and all of it matters.
           cluster-render = import ./checks/cluster-render.nix { inherit pkgs lib env; };
+
+          # 4. The intentional safety correction in the factory migration: single-writer is a
+          # catalogue fact, not an accident of choosing hostPath in the main render fixture.
+          cluster-single-writer-render = import ./checks/cluster-single-writer-render.nix {
+            inherit pkgs claimEnv;
+          };
         });
 
       formatter = forAllSystems (system: (pkgsFor system).nixpkgs-fmt);

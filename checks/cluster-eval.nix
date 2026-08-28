@@ -111,6 +111,29 @@ let
 
   goodCfg = (mkEnv good).config;
 
+  # The factory's platform project is defaultless by design; nixnotes' established public contract
+  # resolves it to the delivery tool's `default`. Exercise that without the test base supplying a
+  # project of its own.
+  defaultProjectCfg = (nixidy.lib.mkEnv {
+    inherit pkgs;
+    modules = [
+      appsModule
+      addressingModule
+      clusterModule
+      {
+        nixidy.target.repository = "https://example.com/example-org/example-gitops.git";
+        nixidy.target.branch = "main";
+        nixnotes.platform.notesNamespace = "example-notes";
+        nixnotes.streams.default-project = {
+          stream = "memos";
+          version = "0.0.0";
+          store = "database";
+          state.data.claim = "example-default-project";
+        };
+      }
+    ];
+  }).config;
+
   ## ---------------------------------------------------------------------
   ## The failing direction: guards
   ## ---------------------------------------------------------------------
@@ -283,6 +306,15 @@ let
       sorted goodCfg.nixnotes.renderedByGrammar == [ "charts" "jot" "keep" "wiki" ]
       && sorted (lib.attrNames goodCfg.nixk3s.apps) == [ "charts" "jot" "keep" "wiki" ];
 
+    "the established project default survives factory construction" =
+      defaultProjectCfg.nixnotes.platform.project == "default"
+      && defaultProjectCfg.nixk3s.apps.default-project.project == "default";
+
+    "legacy and standard reports agree, and this repository has no untyped render route" =
+      goodCfg.nixnotes.slots == goodCfg.nixnotes.clusterSlots
+      && goodCfg.nixnotes.renderedDirectly == [ ]
+      && goodCfg.nixnotes.notRendered == [ ];
+
     # ── THE SIDES, RESOLVED ───────────────────────────────────────────────────────────────────
     "a workload's namespace is its SIDE's, and nothing declared it" =
       goodCfg.nixk3s.apps.jot.namespace == "example-notes"
@@ -326,6 +358,12 @@ let
 
     "the stateless workload mounts nothing, and asks for no storage at all" =
       goodCfg.nixk3s.apps.charts.state == { };
+
+    "single-writer reaches the grammar from the catalogue rather than from a backing accident" =
+      goodCfg.nixk3s.apps.jot.singleWriter
+      && goodCfg.nixk3s.apps.wiki.singleWriter
+      && goodCfg.nixk3s.apps.keep.singleWriter
+      && !goodCfg.nixk3s.apps.charts.singleWriter;
 
     # THE ONE COMPOSED VALUE. The origin is the declaration's, the path is the catalogue's, and
     # nobody writes the second half.
