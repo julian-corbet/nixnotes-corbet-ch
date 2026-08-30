@@ -121,5 +121,8 @@
     # The only workload in this repository where scaling to zero is right without a caveat.
     scaling = "scale-to-zero";
     createNamespace = true;
+    # The example also exercises an in-place takeover; the other three remain fresh objects and
+    # are the negative control for this delivery term.
+    adopt = true;
   };
 }

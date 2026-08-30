@@ -244,11 +244,13 @@ pkgs.runCommand "nixnotes-cluster-render"
 
   echo
   echo "== nothing is rendered below the app grammar: no verbatim object anywhere =="
-  for app in example-jot example-wiki example-keep example-charts; do
-    check "$app: no server-side apply, because nothing here needs adopting" "null" \
+  for app in example-jot example-wiki example-keep; do
+    check "$app: no server-side apply, because this is a fresh object" "null" \
       "$(y '.spec.syncPolicy.syncOptions' $manifests/apps/Application-$app.yaml)"
     check "$app project" "example-knowledge" "$(y '.spec.project' $manifests/apps/Application-$app.yaml)"
   done
+  check "example-charts project" "example-knowledge" \
+    "$(y '.spec.project' $manifests/apps/Application-example-charts.yaml)"
   # Every file this surface produced is a Deployment, a Service, a Namespace or an Application.
   for f in $(find -L $manifests -type f -name '*.yaml' | sort); do
     kind=$(y '.kind' $f)
