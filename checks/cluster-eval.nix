@@ -393,15 +393,16 @@ let
       && goodCfg.nixk3s.apps.jot.probes.liveness.periodSeconds == 15
       && goodCfg.nixk3s.apps.jot.probes.liveness.failureThreshold == 6
       && goodCfg.nixk3s.apps.charts.probes.readiness.path == "/healthcheck"
-      && goodCfg.nixk3s.apps.charts.probes.readiness.initialDelaySeconds == null
+      # The consumer leaves both values unstated; the shared app option materialises its closed
+      # defaults here. cluster-render separately proves that zero delay is omitted from YAML while
+      # the one-second timeout is written.
+      && goodCfg.nixk3s.apps.charts.probes.readiness.initialDelaySeconds == 0
       && goodCfg.nixk3s.apps.charts.probes.readiness.periodSeconds == 5
-      # The catalogue leaves the request timeout unspecified; the renderer supplies Kubernetes'
-      # one-second default on the manifest, asserted separately in cluster-render.
-      && goodCfg.nixk3s.apps.charts.probes.readiness.timeoutSeconds == null
+      && goodCfg.nixk3s.apps.charts.probes.readiness.timeoutSeconds == 1
       && goodCfg.nixk3s.apps.charts.probes.readiness.failureThreshold == 24
       && goodCfg.nixk3s.apps.charts.probes.liveness.path == "/healthcheck"
       && goodCfg.nixk3s.apps.charts.probes.liveness.periodSeconds == 15
-      && goodCfg.nixk3s.apps.charts.probes.liveness.timeoutSeconds == null
+      && goodCfg.nixk3s.apps.charts.probes.liveness.timeoutSeconds == 1
       && goodCfg.nixk3s.apps.charts.probes.liveness.failureThreshold == 6
       && goodCfg.nixk3s.apps.keep.probes.readiness.path == null
       && goodCfg.nixk3s.apps.keep.probes.readiness.initialDelaySeconds == 30;
