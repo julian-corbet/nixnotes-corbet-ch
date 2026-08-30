@@ -393,6 +393,14 @@ let
       && goodCfg.nixk3s.apps.jot.probes.liveness.periodSeconds == 15
       && goodCfg.nixk3s.apps.jot.probes.liveness.failureThreshold == 6
       && goodCfg.nixk3s.apps.charts.probes.readiness.path == "/healthcheck"
+      && goodCfg.nixk3s.apps.charts.probes.readiness.initialDelaySeconds == null
+      && goodCfg.nixk3s.apps.charts.probes.readiness.periodSeconds == 5
+      && goodCfg.nixk3s.apps.charts.probes.readiness.timeoutSeconds == 1
+      && goodCfg.nixk3s.apps.charts.probes.readiness.failureThreshold == 24
+      && goodCfg.nixk3s.apps.charts.probes.liveness.path == "/healthcheck"
+      && goodCfg.nixk3s.apps.charts.probes.liveness.periodSeconds == 15
+      && goodCfg.nixk3s.apps.charts.probes.liveness.timeoutSeconds == 1
+      && goodCfg.nixk3s.apps.charts.probes.liveness.failureThreshold == 6
       && goodCfg.nixk3s.apps.keep.probes.readiness.path == null
       && goodCfg.nixk3s.apps.keep.probes.readiness.initialDelaySeconds == 30;
 

@@ -192,6 +192,18 @@ pkgs.runCommand "nixnotes-cluster-render"
     "$(y '.spec.template.spec.containers[0].readinessProbe.httpGet.path' $JOT_D)"
   check "the renderer's cheap endpoint, not the one that renders a chart" "/healthcheck" \
     "$(y '.spec.template.spec.containers[0].readinessProbe.httpGet.path' $CHART_D)"
+  check "the renderer's cold-start readiness period" "5" \
+    "$(y '.spec.template.spec.containers[0].readinessProbe.periodSeconds' $CHART_D)"
+  check "the renderer's two-minute readiness budget" "24" \
+    "$(y '.spec.template.spec.containers[0].readinessProbe.failureThreshold' $CHART_D)"
+  check "the renderer has no guessed initial delay" "null" \
+    "$(y '.spec.template.spec.containers[0].readinessProbe.initialDelaySeconds' $CHART_D)"
+  check "the renderer's warm liveness endpoint" "/healthcheck" \
+    "$(y '.spec.template.spec.containers[0].livenessProbe.httpGet.path' $CHART_D)"
+  check "the renderer's warm liveness period" "15" \
+    "$(y '.spec.template.spec.containers[0].livenessProbe.periodSeconds' $CHART_D)"
+  check "the renderer's bounded liveness misses" "6" \
+    "$(y '.spec.template.spec.containers[0].livenessProbe.failureThreshold' $CHART_D)"
   # The archive documents no health endpoint, so the honest probe is a TCP connect with a budget
   # sized for a first start that migrates a database before serving anything.
   check "the archive gets a TCP connect, because it documents nothing better" "null" \

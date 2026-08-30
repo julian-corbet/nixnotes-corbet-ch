@@ -409,10 +409,19 @@
 
       readiness = {
         path = "/healthcheck";
-        initialDelaySeconds = 3;
-        periodSeconds = 10;
-        timeoutSeconds = 3;
-        failureThreshold = 3;
+        # A caller is already waiting behind the KEDA interceptor during a cold start. The live
+        # deployment has repeatedly established this two-minute budget without either inventing an
+        # initial delay or widening the one-second request timeout.
+        periodSeconds = 5;
+        failureThreshold = 24;
+      };
+
+      liveness = {
+        path = "/healthcheck";
+        # Once warm, six misses fifteen seconds apart distinguish a wedged renderer from a large
+        # chart without turning cold-start latency into a restart loop.
+        periodSeconds = 15;
+        failureThreshold = 6;
       };
 
       credentials = { };
