@@ -141,6 +141,7 @@ nixnotes.archives.keep = {
 nixnotes.renderers.charts = {
   renderer = "…"; version = "…"; store = "none"; slot = N + 3;
   scaling = "scale-to-zero";                # the only workload here where this is right
+  adopt = true;                             # only when taking over objects already in the cluster
 };
 ```
 

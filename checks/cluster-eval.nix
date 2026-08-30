@@ -106,6 +106,7 @@ let
       slot = 44;
       scaling = "scale-to-zero";
       createNamespace = true;
+      adopt = true;
     };
   };
 
@@ -386,9 +387,20 @@ let
     "a probe watches the port the catalogue calls primary, with the software's own timing" =
       goodCfg.nixk3s.apps.wiki.probes.readiness.path == "/.ping"
       && goodCfg.nixk3s.apps.jot.probes.readiness.path == "/healthz"
+      && goodCfg.nixk3s.apps.jot.probes.readiness.periodSeconds == 5
+      && goodCfg.nixk3s.apps.jot.probes.readiness.failureThreshold == 24
+      && goodCfg.nixk3s.apps.jot.probes.liveness.path == "/healthz"
+      && goodCfg.nixk3s.apps.jot.probes.liveness.periodSeconds == 15
+      && goodCfg.nixk3s.apps.jot.probes.liveness.failureThreshold == 6
       && goodCfg.nixk3s.apps.charts.probes.readiness.path == "/healthcheck"
       && goodCfg.nixk3s.apps.keep.probes.readiness.path == null
       && goodCfg.nixk3s.apps.keep.probes.readiness.initialDelaySeconds == 30;
+
+    "adoption is explicit and reaches only the workload that asked for it" =
+      goodCfg.nixk3s.apps.charts.adopt
+      && !goodCfg.nixk3s.apps.jot.adopt
+      && !goodCfg.nixk3s.apps.wiki.adopt
+      && !goodCfg.nixk3s.apps.keep.adopt;
 
     "the only workload that scales to zero is the one with nothing to reload" =
       goodCfg.nixk3s.apps.charts.scaling == "scale-to-zero"

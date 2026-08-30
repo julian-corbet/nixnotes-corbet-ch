@@ -84,6 +84,9 @@ let
   probesOf = x:
     lib.optionalAttrs (x.entry.readiness != null) {
       readiness = { port = x.entry.primaryPort; } // x.entry.readiness;
+    }
+    // lib.optionalAttrs ((x.entry.liveness or null) != null) {
+      liveness = { port = x.entry.primaryPort; } // x.entry.liveness;
     };
 
   extendApp = x:
@@ -457,6 +460,7 @@ let
     "version"
     "image"
     "createNamespace"
+    "adopt"
     "project"
     "slot"
     "exposure"

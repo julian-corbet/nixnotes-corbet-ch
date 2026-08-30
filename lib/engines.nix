@@ -99,6 +99,8 @@
 #   `readiness`    probe shape and timing, measured rather than guessed. `path = null` is a TCP
 #                  connect, which is the honest answer for software that documents no health
 #                  endpoint.
+#   `liveness`     an independent restart opinion where the software has one, or absent. A cold
+#                  start budget and a wedged-process budget are not interchangeable.
 #   `credentials`  `<role> = { env, required }`. The role is what the credential IS; which Secret
 #                  holds it and under which key is a value.
 #   `authentication`
@@ -151,9 +153,13 @@
 
       readiness = {
         path = "/healthz";
-        initialDelaySeconds = 5;
-        periodSeconds = 10;
-        timeoutSeconds = 3;
+        periodSeconds = 5;
+        failureThreshold = 24;
+      };
+
+      liveness = {
+        path = "/healthz";
+        periodSeconds = 15;
         failureThreshold = 6;
       };
 

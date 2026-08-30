@@ -110,6 +110,17 @@ pkgs.runCommand "nixnotes-cluster-render"
   check "renderer"        "$CHARTS_NS" "$(y '.metadata.namespace' $CHART_D)"
 
   echo
+  echo "== THE CAPTURE SURFACE'S TWO DIFFERENT FAILURE BUDGETS =="
+  check "cold-start readiness probes every five seconds" "5" \
+    "$(y '.spec.template.spec.containers[0].readinessProbe.periodSeconds' $JOT_D)"
+  check "cold-start readiness permits twenty-four failures" "24" \
+    "$(y '.spec.template.spec.containers[0].readinessProbe.failureThreshold' $JOT_D)"
+  check "liveness probes less aggressively" "15" \
+    "$(y '.spec.template.spec.containers[0].livenessProbe.periodSeconds' $JOT_D)"
+  check "liveness restarts after six failures" "6" \
+    "$(y '.spec.template.spec.containers[0].livenessProbe.failureThreshold' $JOT_D)"
+
+  echo
   echo "== NOTHING BELONGING TO ONE SIDE IS RENDERED INTO ANOTHER SIDE'S NAMESPACE =="
   for w in example-jot example-wiki; do
     for f in $(find -L $manifests/$w -type f -name '*.yaml' | sort); do
@@ -187,7 +198,7 @@ pkgs.runCommand "nixnotes-cluster-render"
     "$(y '.spec.template.spec.containers[0].readinessProbe.httpGet' $KEEP_D)"
   check "and a delay sized for its first start" "30" \
     "$(y '.spec.template.spec.containers[0].readinessProbe.initialDelaySeconds' $KEEP_D)"
-  check "no liveness probe was synthesized anywhere" "null" \
+  check "no liveness probe is synthesized where the catalogue declares none" "null" \
     "$(y '.spec.template.spec.containers[0].livenessProbe' $WIKI_D)"
 
   echo
@@ -196,6 +207,12 @@ pkgs.runCommand "nixnotes-cluster-render"
   check "and its Application ignores that field, so a sync cannot fight the autoscaler" \
     "/spec/replicas" \
     "$(y '.spec.ignoreDifferences[0].jsonPointers[0]' $manifests/apps/Application-example-charts.yaml)"
+  check "an adopted workload uses server-side diff" "ServerSideDiff=true" \
+    "$(y '.metadata.annotations."argocd.argoproj.io/compare-options"' $manifests/apps/Application-example-charts.yaml)"
+  check "an adopted workload uses server-side apply" "ServerSideApply=true" \
+    "$(y '.spec.syncPolicy.syncOptions[0]' $manifests/apps/Application-example-charts.yaml)"
+  check "adoption does not leak onto an ordinary workload" "null" \
+    "$(y '.metadata.annotations."argocd.argoproj.io/compare-options"' $manifests/apps/Application-example-jot.yaml)"
   check "the corpus workloads keep exactly one" "1" "$(y '.spec.replicas' $WIKI_D)"
   check "the scaling class is on the objects as a label" "scale-to-zero" \
     "$(y '.metadata.labels."nixk3s.dev/scaling"' $CHART_D)"
